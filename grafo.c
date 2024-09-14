@@ -294,11 +294,68 @@ void stampaGrafoMatrice(struct GrafoMatrice* grafo) {
     }
 }
 
+int* floydWarshall(struct GrafoMatrice *grafo){
+    //Primo indice: 1 o 2, secondo indice: sorgente, terzo indice: colonna
+    int ***listaMatrici = (int***)malloc(sizeof(int**) * 2);
+    for(int i = 0; i < 2; i++){
+        listaMatrici[i] = (int**)malloc(sizeof(int*) * grafo->numVertici);
+        for(int j = 0; j < grafo->numVertici; j++){
+            listaMatrici[i][j] = (int*)malloc(sizeof(int) * grafo->numVertici);
+        }
+    }
+
+    //Copia la matrice di adiacenza nella struttura
+    for(int i = 0; i < grafo->numVertici; i++){
+        for(int j = 0; j < grafo->numVertici; j++){
+            listaMatrici[0][i][j] = grafo->matrice[i][j];
+        }
+    }
+
+    //Le matrici vengono riutilizzate
+    int index;
+    for(int i = 0; i < grafo->numVertici; i++){
+        index = (i + 1) % 2;
+        for(int j = 0; j < grafo->numVertici; j++){
+            listaMatrici[index][i][j] = listaMatrici[index ^ 1][i][j];
+            listaMatrici[index][j][i] = listaMatrici[index ^ 1][j][i];
+        }
+        for(int j = 0; j < grafo->numVertici; j++){
+            for(int k = 0; k < grafo->numVertici; k++){
+                //Sceglie il minore
+                if(listaMatrici[index ^ 1][j][k] < listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k]){
+                    listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][k];
+                } else {
+                    listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k];
+                }
+            }
+        }
+    }
+
+    int max = INT_MIN;
+    int source = -1;
+    int destination = -1;
+    for(int i = 0; i < grafo->numVertici; i++){
+        for(int j = 0; j < grafo->numVertici; j++){
+            printf("%d\t",listaMatrici[index][i][j]);
+            if(max < listaMatrici[index][i][j]){
+                max = listaMatrici[index][i][j];
+                source = i;
+                destination = j;
+            }
+        }
+        printf("\n");
+    }
+
+    int *v = (int*)malloc(sizeof(int) * 3);
+    v[0] = max; v[1] = source; v[2] = destination;
+    return v;
+}
+
 int main() {
 
     //Creazione grafo ----
-    int numVertici = 100;  
-    int numArchi = 400;    
+    int numVertici = 5;  
+    int numArchi = 10;    
 
     struct Grafo* grafo = creaGrafo(numVertici);
     aggiungiArchi(grafo, numArchi);
@@ -311,21 +368,36 @@ int main() {
     copiaGrafo(grafoMatrice, grafo);
 
     int size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
-    int size2 = sizeof(int) * numVertici * numVertici;
+    int size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
 
     printf("Dimensione liste di adiacenza: %d B --- Dimensione matrice: %d B", size1, size2);
+
+    printf("\nFloyd Warshall...\n");
+    time_t inizio3 = clock();
+    int* v = floydWarshall(grafoMatrice);
+    time_t fine3 = clock();
+    printf("Source: %d, Destination: %d, Length: %d", v[1], v[2], v[0]);
 
     //stampaGrafo(grafo);
     //stampaGrafoMatrice(grafoMatrice);
 
-    /*
+    
 
     //Dijkstra
     printf("\n\nDIJKSTRA...\n");
     time_t inizio2 = clock();
-    dijkstra(grafo, 1);
+    dijkstra(grafo, 2);
     time_t fine2 = clock();
 
+    for(int i = 0; i < grafo->numVertici; i++){
+        int distanza = grafo->arrayListe[i].distanza;
+        int parent = grafo->arrayListe[i].parent;
+        bfVector[i] = grafo->arrayListe[i].distanza;
+        printf("\nDistanza da 2 a %d: %d, Parent: %d", i, distanza, parent);
+    }
+    
+
+    /*
     //Bellman-Ford
     double bfTime;
     printf("BELLMANFORD...\n");
@@ -337,12 +409,7 @@ int main() {
     */
     
     /*
-    for(int i = 0; i < grafo->numVertici; i++){
-        int distanza = grafo->arrayListe[i].distanza;
-        int parent = grafo->arrayListe[i].parent;
-        bfVector[i] = grafo->arrayListe[i].distanza;
-        printf("\nDistanza da 1 a %d: %d, Parent: %d", i, distanza, parent);
-    }
+    
       
 
     for(int i = 0; i < grafo->numVertici; i++){
