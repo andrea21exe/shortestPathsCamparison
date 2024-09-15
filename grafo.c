@@ -322,10 +322,10 @@ int* floydWarshall(struct GrafoMatrice *grafo){
         for(int j = 0; j < grafo->numVertici; j++){
             for(int k = 0; k < grafo->numVertici; k++){
                 //Sceglie il minore
-                if(listaMatrici[index ^ 1][j][k] < listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k]){
-                    listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][k];
-                } else {
+                if(listaMatrici[index ^ 1][j][i] != INT_MAX && listaMatrici[index ^ 1][i][k] != INT_MAX && listaMatrici[index ^ 1][j][k] > listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k]){
                     listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k];
+                } else {
+                    listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][k];
                 }
             }
         }
@@ -354,8 +354,8 @@ int* floydWarshall(struct GrafoMatrice *grafo){
 int main() {
 
     //Creazione grafo ----
-    int numVertici = 5;  
-    int numArchi = 10;    
+    int numVertici = 10;  
+    int numArchi = 40;    
 
     struct Grafo* grafo = creaGrafo(numVertici);
     aggiungiArchi(grafo, numArchi);
@@ -386,32 +386,33 @@ int main() {
     //Dijkstra
     printf("\n\nDIJKSTRA...\n");
     time_t inizio2 = clock();
-    dijkstra(grafo, 2);
+    dijkstra(grafo, 3);
     time_t fine2 = clock();
 
     for(int i = 0; i < grafo->numVertici; i++){
         int distanza = grafo->arrayListe[i].distanza;
         int parent = grafo->arrayListe[i].parent;
-        bfVector[i] = grafo->arrayListe[i].distanza;
-        printf("\nDistanza da 2 a %d: %d, Parent: %d", i, distanza, parent);
+        dijkstraVector[i] = grafo->arrayListe[i].distanza;
+        //printf("\nDistanza da 2 a %d: %d, Parent: %d", i, distanza, parent);
     }
     
 
-    /*
+    
     //Bellman-Ford
     double bfTime;
     printf("BELLMANFORD...\n");
     time_t inizio = clock();
-    int bf = bellmanFord(grafo, 1);
+    int bf = bellmanFord(grafo, 3);
     time_t fine = clock();
+    for(int i = 0; i < grafo->numVertici; i++){
+        int distanza = grafo->arrayListe[i].distanza;
+        int parent = grafo->arrayListe[i].parent;
+        bfVector[i] = grafo->arrayListe[i].distanza;
+        //printf("\nDistanza da 2 a %d: %d, Parent: %d", i, distanza, parent);
+    }
 
     printf("\n BF: %fs --- Dijkstra: %fs\n", bfTime, (double)(fine2 - inizio2)/CLOCKS_PER_SEC);
-    */
-    
-    /*
-    
       
-
     for(int i = 0; i < grafo->numVertici; i++){
         if(dijkstraVector[i] != bfVector[i]){
             printf("\nMale!\n");
@@ -419,8 +420,6 @@ int main() {
         }
     }
     
-    printf("\nFUNZIONA");
-    */
     return 0;
 }
 
