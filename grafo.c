@@ -354,8 +354,8 @@ int* floydWarshall(struct GrafoMatrice *grafo){
 int main() {
 
     //Creazione grafo ----
-    int numVertici = 10;  
-    int numArchi = 40;    
+    int numVertici = 3;  
+    int numArchi = 2;    
 
     struct Grafo* grafo = creaGrafo(numVertici);
     aggiungiArchi(grafo, numArchi);
@@ -381,12 +381,10 @@ int main() {
     //stampaGrafo(grafo);
     //stampaGrafoMatrice(grafoMatrice);
 
-    
-
     //Dijkstra
     printf("\n\nDIJKSTRA...\n");
     time_t inizio2 = clock();
-    dijkstra(grafo, 3);
+    dijkstra(grafo, 1);
     time_t fine2 = clock();
 
     for(int i = 0; i < grafo->numVertici; i++){
@@ -396,13 +394,11 @@ int main() {
         //printf("\nDistanza da 2 a %d: %d, Parent: %d", i, distanza, parent);
     }
     
-
-    
     //Bellman-Ford
     double bfTime;
     printf("BELLMANFORD...\n");
     time_t inizio = clock();
-    int bf = bellmanFord(grafo, 3);
+    int bf = bellmanFord(grafo, 1);
     time_t fine = clock();
     for(int i = 0; i < grafo->numVertici; i++){
         int distanza = grafo->arrayListe[i].distanza;
