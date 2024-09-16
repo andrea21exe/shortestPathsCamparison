@@ -2,7 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 
-#define N 10
+#define N 12
 #define ATTEMPTS_X_GRAPH 3
 
 // Struttura per rappresentare un nodo della lista di adiacenza
@@ -68,7 +68,7 @@ void deallocaGrafo(struct Grafo* grafo) {
         while (corrente != NULL) {
             struct Nodo* temp = corrente;
             corrente = corrente->prossimo;
-            free(temp);  // Libera ogni nodo della lista
+            free(temp); 
         }
     }
 
@@ -79,17 +79,13 @@ void deallocaGrafo(struct Grafo* grafo) {
     free(grafo);
 }
 
-// Funzione per aggiungere un arco in un grafo con peso
+// Funzione per aggiungere un arco in un grafo non orientato
 void aggiungiArco(struct Grafo* grafo, int sorgente, int destinazione, int peso) {
-    // Aggiungi un arco dalla sorgente alla destinazione con un certo peso
+    // Aggiungi un arco dalla sorgente alla destinazione con peso
     struct Nodo* nuovoNodo = creaNodo(destinazione, peso);
     nuovoNodo->prossimo = grafo->arrayListe[sorgente].testa;
     grafo->arrayListe[sorgente].testa = nuovoNodo;
 
-    // Aggiungi un arco dalla destinazione alla sorgente (per un grafo non orientato)
-    //nuovoNodo = creaNodo(sorgente, peso);
-    //nuovoNodo->prossimo = grafo->arrayListe[destinazione].testa;
-    //grafo->arrayListe[destinazione].testa = nuovoNodo;
 }
 
 // Funzione per stampare il grafo con i pesi degli archi
@@ -197,8 +193,8 @@ void connettiFortemente(struct Grafo* grafo) {
 }
 
 // Funzione modificata per aggiungere archi casuali e garantire la forte connessione
-void aggiungiArchi(struct Grafo* grafo, int numArchi) {
-    srand(0);  // Inizializza il generatore di numeri casuali
+void aggiungiArchi(struct Grafo* grafo, int numArchi, int seed) {
+    srand(seed);  // Inizializza il generatore di numeri casuali
 
     // Prima creiamo una componente fortemente connessa di base
     connettiFortemente(grafo);
@@ -279,7 +275,7 @@ void deallocaGrafoMatrice(struct GrafoMatrice* grafo) {
     free(grafo);
 }
 
-int* floydWarshall(struct GrafoMatrice *grafo){
+int** floydWarshall(struct GrafoMatrice *grafo){
     // Primo indice: 1 o 2, secondo indice: sorgente, terzo indice: destinazione
     int ***listaMatrici = (int***)malloc(sizeof(int**) * 2);
     for(int i = 0; i < 2; i++){
@@ -311,6 +307,9 @@ int* floydWarshall(struct GrafoMatrice *grafo){
         }
     }
 
+    return listaMatrici[index];
+
+    /*
     int max = INT_MIN;
     int source = -1;
     int destination = -1;
@@ -337,6 +336,8 @@ int* floydWarshall(struct GrafoMatrice *grafo){
     free(listaMatrici);
 
     return v;
+
+    */
 }
 
 void dijkstra(struct Grafo* grafo, int sorgente) {
@@ -457,31 +458,34 @@ int main() {
     double bellmanFordTimes[N];
     double dijkstraTimes[N];
     double floydWarshallTimes[N];
+    FILE *file = fopen("risultati_tempi.txt", "w");
+
 
     int numVertici = 100;
     // Aumenta il numero di nodi
     for(int round = 1; round <= N/2; round++){
         // Grafo con numero di archi circa uguale al numero di nodi
         // Oppure numero di archi molto maggiore al numero di nodi
-        numVertici = round * numVertici;
+        
         for(int round2 = 0; round2 < 2; round2++){
             // 3 prove uguali per ogni grafo ---> si fa la media
             int numArchi;
             if(round2 == 0){
                 numArchi = numVertici * 2;
             } else {
-                numArchi = (numVertici * numVertici) - (2 * numVertici);
+                numArchi = (numVertici * numVertici / 8);
             }
 
             double bellmanFordAttempts[ATTEMPTS_X_GRAPH];
             double dijkstraAttempts[ATTEMPTS_X_GRAPH];
             double floydWarshallAttempts[ATTEMPTS_X_GRAPH];
+            int size1, size2;
 
             for(int attempt = 0; attempt < ATTEMPTS_X_GRAPH; attempt++){
 
                 // Inizio esperimento
                 struct Grafo* grafo = creaGrafo(numVertici);
-                aggiungiArchi(grafo, numArchi);
+                aggiungiArchi(grafo, numArchi, attempt);
 
                 /*
                 int** bfVector = (int**)malloc(sizeof(int*)*grafo->numVertici);
@@ -495,28 +499,26 @@ int main() {
                 struct GrafoMatrice* grafoMatrice = creaGrafoMatrice(numVertici);;
                 copiaGrafo(grafoMatrice, grafo);
 
-                int size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
-                int size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
+                size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
+                size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
                 size2 += 2 * grafoMatrice->numVertici * grafoMatrice->numVertici;
                 //TODO salvare dimensioni
-                printf("Dimensione liste di adiacenza %d nodi e %d archi: %d B --- Dimensione matrice: %d B\n", numVertici, numArchi, size1, size2);
 
                 // ALGORITMI
 
-                 // Floyd Warshall
+                // Floyd Warshall
                 printf("Floyd Warshall...\n");
                 double fwTime;
-                time_t inizio3 = clock();
-                int* v = floydWarshall(grafoMatrice);
-                time_t fine3 = clock();
-                fwTime = (double)(fine3 - inizio3)/CLOCKS_PER_SEC;
+                time_t fine; time_t inizio = clock();
+                floydWarshall(grafoMatrice);
+                fine = clock();
+                fwTime = (double)(fine - inizio)/CLOCKS_PER_SEC;
                 floydWarshallAttempts[attempt] = fwTime;
 
                 // Dijkstra
                 printf("Dijkstra...\n");
-                double dTime;
-                time_t inizio2 = clock();
-                int source;
+                double dTime; int source;
+                inizio = clock();
                 for(source = 0; source < grafo->numVertici; source++){
                     dijkstra(grafo, source);
                     /*
@@ -525,31 +527,29 @@ int main() {
                     }
                     */
                 }    
-                time_t fine2 = clock();
-                dTime =  (double)(fine2 - inizio2)/CLOCKS_PER_SEC;  
+                fine = clock();
+                dTime =  (double)(fine - inizio)/CLOCKS_PER_SEC;  
                 dijkstraAttempts[attempt] = dTime;
 
                 // Bellman-Ford
-                double bfTime;
-                printf("Bellman Ford...\n");
-                time_t inizio = clock();
-                for(source = 0; source < grafo->numVertici; source++){
-                    bellmanFord(grafo, source);
+                if(numArchi < 100000){
+                    double bfTime;
+                    printf("Bellman Ford...\n");
+                    inizio = clock();
+                    for(source = 0; source < grafo->numVertici; source++){
+                        bellmanFord(grafo, source);
                     /*
                     for(int i = 0; i < grafo->numVertici; i++){
                         bfVector[source][i] = grafo->arrayListe[i].distanza;
                     }
                     */
+                    }
+                    fine = clock();
+                    bfTime = (double)(fine - inizio)/CLOCKS_PER_SEC;
+                    bellmanFordAttempts[attempt] = bfTime;
+
                 }
-                time_t fine = clock();
-                bfTime = (double)(fine - inizio)/CLOCKS_PER_SEC;
-                bellmanFordAttempts[attempt] = bfTime;
 
-                //printf("Max Path: Source: %d, Destination: %d, Max Length: %d", v[1], v[2], v[0]);
-                //printf("\nFloyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n", fwTime, bfTime, dTime);
- 
-
-                
                 // Deallocazione risorse di memoria
                 deallocaGrafo(grafo);
                 deallocaGrafoMatrice(grafoMatrice);
@@ -560,7 +560,6 @@ int main() {
                 }
                 free(bfVector); free(dijkstraVector);
                 */
-                free(v);
             }
 
             double sumDijkstra = 0;
@@ -574,9 +573,18 @@ int main() {
             floydWarshallTimes[round + round2] = sumFloydWarshall / ATTEMPTS_X_GRAPH;
             bellmanFordTimes[round + round2] = sumBellmanFord / ATTEMPTS_X_GRAPH;
             dijkstraTimes[round + round2] = sumDijkstra / ATTEMPTS_X_GRAPH;
+
+            printf("Dimensione liste di adiacenza %d nodi e %d archi: %d B --- Dimensione matrice: %d B\n", numVertici, numArchi, size1, size2);
             printf("\nMEDIA %d nodi, %d archi: Floyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n\n", numVertici, numArchi, floydWarshallTimes[round + round2], bellmanFordTimes[round + round2],  dijkstraTimes[round + round2]);
 
+
+            fprintf(file, "Grafo con %d vertici e %d archi\n", numVertici, numArchi);
+            fprintf(file, "Bellman-Ford: %f sec\n", bellmanFordTimes[round + round2]);
+            fprintf(file, "Dijkstra: %f sec\n", dijkstraTimes[round + round2]);
+            fprintf(file, "Floyd-Warshall: %f sec\n\n", floydWarshallTimes[round + round2]);
         }
+
+        numVertici = numVertici * 2;
     }
     
     /*
@@ -617,6 +625,8 @@ int main() {
         return -1;
     } 
     */
+
+    fclose(file);
 
       
     return 0;
