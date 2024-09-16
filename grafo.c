@@ -2,6 +2,9 @@
 #include <time.h>
 #include <stdlib.h>
 
+#define N 10
+#define ATTEMPTS_X_GRAPH 3
+
 // Struttura per rappresentare un nodo della lista di adiacenza
 struct Nodo {
     int vertice;
@@ -54,6 +57,28 @@ struct Grafo* creaGrafo(int numVertici) {
     return grafo;
 }
 
+void deallocaGrafo(struct Grafo* grafo) {
+    if (grafo == NULL) {
+        return;
+    }
+
+    // Dealloca ogni lista di adiacenza
+    for (int i = 0; i < grafo->numVertici; i++) {
+        struct Nodo* corrente = grafo->arrayListe[i].testa;
+        while (corrente != NULL) {
+            struct Nodo* temp = corrente;
+            corrente = corrente->prossimo;
+            free(temp);  // Libera ogni nodo della lista
+        }
+    }
+
+    // Dealloca l'array di liste di adiacenza
+    free(grafo->arrayListe);
+
+    // Dealloca la struttura del grafo
+    free(grafo);
+}
+
 // Funzione per aggiungere un arco in un grafo con peso
 void aggiungiArco(struct Grafo* grafo, int sorgente, int destinazione, int peso) {
     // Aggiungi un arco dalla sorgente alla destinazione con un certo peso
@@ -62,9 +87,9 @@ void aggiungiArco(struct Grafo* grafo, int sorgente, int destinazione, int peso)
     grafo->arrayListe[sorgente].testa = nuovoNodo;
 
     // Aggiungi un arco dalla destinazione alla sorgente (per un grafo non orientato)
-    nuovoNodo = creaNodo(sorgente, peso);
-    nuovoNodo->prossimo = grafo->arrayListe[destinazione].testa;
-    grafo->arrayListe[destinazione].testa = nuovoNodo;
+    //nuovoNodo = creaNodo(sorgente, peso);
+    //nuovoNodo->prossimo = grafo->arrayListe[destinazione].testa;
+    //grafo->arrayListe[destinazione].testa = nuovoNodo;
 }
 
 // Funzione per stampare il grafo con i pesi degli archi
@@ -179,7 +204,7 @@ void aggiungiArchi(struct Grafo* grafo, int numArchi) {
     connettiFortemente(grafo);
 
     // Poi aggiungiamo archi casuali per il resto del grafo
-    for (int i = 0; i < numArchi; i++) {
+    for (int i = 0; i < numArchi - grafo->numVertici; i++) {
         int sorgente = rand() % grafo->numVertici;
         int destinazione = rand() % grafo->numVertici;
         int peso = rand() % 100 + 1;  // Pesi tra 1 e 100
@@ -237,6 +262,23 @@ void stampaGrafoMatrice(struct GrafoMatrice* grafo) {
     }
 }
 
+void deallocaGrafoMatrice(struct GrafoMatrice* grafo) {
+    if (grafo == NULL) {
+        return;
+    }
+
+    // Dealloca ogni riga della matrice di adiacenza
+    for (int i = 0; i < grafo->numVertici; i++) {
+        free(grafo->matrice[i]);  // Libera ogni riga
+    }
+
+    // Dealloca l'array di puntatori (la matrice)
+    free(grafo->matrice);
+
+    // Dealloca la struttura del grafo
+    free(grafo);
+}
+
 int* floydWarshall(struct GrafoMatrice *grafo){
     // Primo indice: 1 o 2, secondo indice: sorgente, terzo indice: destinazione
     int ***listaMatrici = (int***)malloc(sizeof(int**) * 2);
@@ -286,6 +328,13 @@ int* floydWarshall(struct GrafoMatrice *grafo){
 
     int *v = (int*)malloc(sizeof(int) * 3);
     v[0] = max; v[1] = source; v[2] = destination;
+
+    for(int i = 0; i < 2; i++){
+        for(int j = 0; j < grafo->numVertici; j++){
+            free(listaMatrici[i][j]);
+        }
+    }
+    free(listaMatrici);
 
     return v;
 }
@@ -405,65 +454,153 @@ int bellmanFord(struct Grafo* grafo, int sorgente) {
 int main() {
     
     // Creazione grafo ----
-    int numVertici = 100;  
-    int numArchi = 400;    
+    double bellmanFordTimes[N];
+    double dijkstraTimes[N];
+    double floydWarshallTimes[N];
 
-    struct Grafo* grafo = creaGrafo(numVertici);
-    aggiungiArchi(grafo, numArchi);
+    int numVertici = 100;
+    // Aumenta il numero di nodi
+    for(int round = 1; round <= N/2; round++){
+        // Grafo con numero di archi circa uguale al numero di nodi
+        // Oppure numero di archi molto maggiore al numero di nodi
+        numVertici = round * numVertici;
+        for(int round2 = 0; round2 < 2; round2++){
+            // 3 prove uguali per ogni grafo ---> si fa la media
+            int numArchi;
+            if(round2 == 0){
+                numArchi = numVertici * 2;
+            } else {
+                numArchi = (numVertici * numVertici) - (2 * numVertici);
+            }
+
+            double bellmanFordAttempts[ATTEMPTS_X_GRAPH];
+            double dijkstraAttempts[ATTEMPTS_X_GRAPH];
+            double floydWarshallAttempts[ATTEMPTS_X_GRAPH];
+
+            for(int attempt = 0; attempt < ATTEMPTS_X_GRAPH; attempt++){
+
+                // Inizio esperimento
+                struct Grafo* grafo = creaGrafo(numVertici);
+                aggiungiArchi(grafo, numArchi);
+
+                /*
+                int** bfVector = (int**)malloc(sizeof(int*)*grafo->numVertici);
+                int** dijkstraVector = (int**)malloc(sizeof(int*)*grafo->numVertici);
+                for(int i = 0; i < grafo->numVertici; i++){
+                    bfVector[i] = (int*)malloc(sizeof(int)*grafo->numVertici);
+                    dijkstraVector[i] = (int*)malloc(sizeof(int)*grafo->numVertici);
+                }
+                */
+
+                struct GrafoMatrice* grafoMatrice = creaGrafoMatrice(numVertici);;
+                copiaGrafo(grafoMatrice, grafo);
+
+                int size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
+                int size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
+                size2 += 2 * grafoMatrice->numVertici * grafoMatrice->numVertici;
+                //TODO salvare dimensioni
+                printf("Dimensione liste di adiacenza %d nodi e %d archi: %d B --- Dimensione matrice: %d B\n", numVertici, numArchi, size1, size2);
+
+                // ALGORITMI
+
+                 // Floyd Warshall
+                printf("Floyd Warshall...\n");
+                double fwTime;
+                time_t inizio3 = clock();
+                int* v = floydWarshall(grafoMatrice);
+                time_t fine3 = clock();
+                fwTime = (double)(fine3 - inizio3)/CLOCKS_PER_SEC;
+                floydWarshallAttempts[attempt] = fwTime;
+
+                // Dijkstra
+                printf("Dijkstra...\n");
+                double dTime;
+                time_t inizio2 = clock();
+                int source;
+                for(source = 0; source < grafo->numVertici; source++){
+                    dijkstra(grafo, source);
+                    /*
+                    for(int i = 0; i < grafo->numVertici; i++){
+                        dijkstraVector[source][i] = grafo->arrayListe[i].distanza;
+                    }
+                    */
+                }    
+                time_t fine2 = clock();
+                dTime =  (double)(fine2 - inizio2)/CLOCKS_PER_SEC;  
+                dijkstraAttempts[attempt] = dTime;
+
+                // Bellman-Ford
+                double bfTime;
+                printf("Bellman Ford...\n");
+                time_t inizio = clock();
+                for(source = 0; source < grafo->numVertici; source++){
+                    bellmanFord(grafo, source);
+                    /*
+                    for(int i = 0; i < grafo->numVertici; i++){
+                        bfVector[source][i] = grafo->arrayListe[i].distanza;
+                    }
+                    */
+                }
+                time_t fine = clock();
+                bfTime = (double)(fine - inizio)/CLOCKS_PER_SEC;
+                bellmanFordAttempts[attempt] = bfTime;
+
+                //printf("Max Path: Source: %d, Destination: %d, Max Length: %d", v[1], v[2], v[0]);
+                //printf("\nFloyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n", fwTime, bfTime, dTime);
+ 
+
+                
+                // Deallocazione risorse di memoria
+                deallocaGrafo(grafo);
+                deallocaGrafoMatrice(grafoMatrice);
+                /*
+                for(int i = 0; i < grafo->numVertici; i++){
+                    free(bfVector[i]);
+                    free(dijkstraVector[i]);
+                }
+                free(bfVector); free(dijkstraVector);
+                */
+                free(v);
+            }
+
+            double sumDijkstra = 0;
+            double sumFloydWarshall = 0;
+            double sumBellmanFord = 0;
+            for(int i = 0; i < ATTEMPTS_X_GRAPH; i++){
+                sumDijkstra += dijkstraAttempts[i];
+                sumBellmanFord += bellmanFordAttempts[i];
+                sumFloydWarshall += floydWarshallAttempts[i];
+            }
+            floydWarshallTimes[round + round2] = sumFloydWarshall / ATTEMPTS_X_GRAPH;
+            bellmanFordTimes[round + round2] = sumBellmanFord / ATTEMPTS_X_GRAPH;
+            dijkstraTimes[round + round2] = sumDijkstra / ATTEMPTS_X_GRAPH;
+            printf("\nMEDIA %d nodi, %d archi: Floyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n\n", numVertici, numArchi, floydWarshallTimes[round + round2], bellmanFordTimes[round + round2],  dijkstraTimes[round + round2]);
+
+        }
+    }
+    
+    /*
+    int count = 0;
+    for(int i = 0; i < grafo->numVertici; i++){
+        struct Nodo*arco = grafo->arrayListe[i].testa;
+        while(arco){
+            ++count;
+            arco = arco->prossimo;
+        }
+    }
+    printf("%d", count);
+    return 0;
+    */
 
     // Per debug, voglio vedere se ottengo gli stessi risultati    
-    int** bfVector = (int**)malloc(sizeof(int*)*grafo->numVertici);
-    int** dijkstraVector = (int**)malloc(sizeof(int*)*grafo->numVertici);
-    for(int i = 0; i < grafo->numVertici; i++){
-        bfVector[i] = (int*)malloc(sizeof(int)*grafo->numVertici);
-        dijkstraVector[i] = (int*)malloc(sizeof(int)*grafo->numVertici);
-    }
+    
 
-    struct GrafoMatrice* grafoMatrice = creaGrafoMatrice(numVertici);;
-    copiaGrafo(grafoMatrice, grafo);
-
-    int size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
-    int size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
-    printf("Dimensione liste di adiacenza: %d B --- Dimensione matrice: %d B\n", size1, size2);
-
-    // Floyd Warshall
-    printf("Floyd Warshall...\n");
-    double fwTime;
-    time_t inizio3 = clock();
-    int* v = floydWarshall(grafoMatrice);
-    time_t fine3 = clock();
-    fwTime = (double)(fine3 - inizio3)/CLOCKS_PER_SEC;
-
+    
     //stampaGrafo(grafo);
     //stampaGrafoMatrice(grafoMatrice);
-
-    // Dijkstra
-    printf("Dijkstra...\n");
-    double dTime;
-    time_t inizio2 = clock();
-    int source;
-    for(source = 0; source < grafo->numVertici; source++){
-        dijkstra(grafo, source);
-        for(int i = 0; i < grafo->numVertici; i++){
-            dijkstraVector[source][i] = grafo->arrayListe[i].distanza;
-        }
-    }
-    time_t fine2 = clock();
-    dTime =  (double)(fine2 - inizio2)/CLOCKS_PER_SEC;
     
-    // Bellman-Ford
-    double bfTime;
-    printf("Bellman Ford...\n");
-    time_t inizio = clock();
-    for(source = 0; source < grafo->numVertici; source++){
-        bellmanFord(grafo, source);
-        for(int i = 0; i < grafo->numVertici; i++){
-            bfVector[source][i] = grafo->arrayListe[i].distanza;
-        }
-    }
-    time_t fine = clock();
-    bfTime = (double)(fine - inizio)/CLOCKS_PER_SEC;
-
+    
+    /*
     int max = INT_MIN;
     for(int i = 0; i < grafo->numVertici; i++){
         for(int j = 0; j < grafo->numVertici; j++){
@@ -479,10 +616,9 @@ int main() {
         printf("\nNOOOOO");
         return -1;
     } 
+    */
 
-    printf("Max Path: Source: %d, Destination: %d, Max Length: %d", v[1], v[2], v[0]);
-    printf("\nFloyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n", fwTime, bfTime, dTime);
-    
+      
     return 0;
 }
 
