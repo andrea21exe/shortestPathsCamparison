@@ -500,12 +500,9 @@ int main() {
                 copiaGrafo(grafoMatrice, grafo);
 
                 size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
-                size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * grafoMatrice->numVertici + sizeof(int) * grafoMatrice->numVertici * grafoMatrice->numVertici;
-                size2 += 2 * grafoMatrice->numVertici * grafoMatrice->numVertici;
-                //TODO salvare dimensioni
+                size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * 3 * grafoMatrice->numVertici + sizeof(int) * 3 * grafoMatrice->numVertici * grafoMatrice->numVertici + sizeof(int**) * 2;
 
                 // ALGORITMI
-
                 // Floyd Warshall
                 printf("Floyd Warshall...\n");
                 double fwTime;
