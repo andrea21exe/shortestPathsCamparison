@@ -25,7 +25,7 @@ struct Grafo {
     struct Lista* arrayListe;
 };
 
-// Funzione per creare un nuovo nodo della lista di adiacenza
+// Crea un nuovo nodo della lista di adiacenza
 struct Nodo* creaNodo(int vertice, int peso) {
     struct Nodo* nuovoNodo = (struct Nodo*)malloc(sizeof(struct Nodo));
     nuovoNodo->vertice = vertice;
@@ -81,7 +81,6 @@ void deallocaGrafo(struct Grafo* grafo) {
 
 // Funzione per aggiungere un arco in un grafo non orientato
 void aggiungiArco(struct Grafo* grafo, int sorgente, int destinazione, int peso) {
-    // Aggiungi un arco dalla sorgente alla destinazione con peso
     struct Nodo* nuovoNodo = creaNodo(destinazione, peso);
     nuovoNodo->prossimo = grafo->arrayListe[sorgente].testa;
     grafo->arrayListe[sorgente].testa = nuovoNodo;
@@ -103,10 +102,6 @@ void stampaGrafo(struct Grafo* grafo) {
 
 void exchange(int*v, int *pos, int a, int b){
 
-    if (a < 0 || b < 0) {
-        printf("Errore: Indice negativo. a = %d, b = %d\n", a, b);
-        exit(1);
-    }
     int temp = v[a];
     v[a] = v[b];
     v[b] = temp;
@@ -145,7 +140,6 @@ void decreaseKey(struct Grafo* grafo, int* heap, int* pos, int v, int key){
     grafo->arrayListe[v].distanza = key;
     int i = pos[v];
 
-    // Risali l'heap finché la proprietà del min-heap è soddisfatta
     int parent = (i - 1) / 2;
     while (i > 0 && grafo->arrayListe[heap[parent]].distanza > grafo->arrayListe[v].distanza) {
         //printf("\nparent: %d, i: %d\n", parent, i );
@@ -164,7 +158,7 @@ int extractMin(struct Grafo* grafo, int* heap, int* pos, int dim) {
 }
 
 
-// Funzione per verificare se un arco esiste già
+// Funzione per verificare se un arco esiste
 int esisteArco(struct Grafo* grafo, int sorgente, int destinazione) {
     struct Nodo* arcoCorrente = grafo->arrayListe[sorgente].testa;
     while (arcoCorrente) {
@@ -194,22 +188,20 @@ void connettiFortemente(struct Grafo* grafo) {
 
 // Funzione modificata per aggiungere archi casuali e garantire la forte connessione
 void aggiungiArchi(struct Grafo* grafo, int numArchi, int seed) {
-    srand(seed);  // Inizializza il generatore di numeri casuali
-
-    // Prima creiamo una componente fortemente connessa di base
+    srand(seed);  
     connettiFortemente(grafo);
 
-    // Poi aggiungiamo archi casuali per il resto del grafo
+    // si aggiungono archi casuali per il resto del grafo
     for (int i = 0; i < numArchi - grafo->numVertici; i++) {
         int sorgente = rand() % grafo->numVertici;
         int destinazione = rand() % grafo->numVertici;
         int peso = rand() % 100 + 1;  // Pesi tra 1 e 100
 
-        // Assicurati che non ci siano archi che puntano allo stesso nodo o che esistano già
+        // ci si assicura non ci siano archi che puntano allo stesso nodo o che esistano già
         if (sorgente != destinazione && esisteArco(grafo, sorgente, destinazione) == 0) {
             aggiungiArco(grafo, sorgente, destinazione, peso);
         } else {
-            i--;  // Ripeti il ciclo se sorgente e destinazione sono uguali o l'arco esiste già
+            i--;  // si ripete il ciclo se sorgente e destinazione sono uguali o l'arco esiste già
         }
     }
 }
@@ -298,8 +290,12 @@ int** floydWarshall(struct GrafoMatrice *grafo){
         index = (i + 1) % 2;
         for(int j = 0; j < grafo->numVertici; j++){
             for(int k = 0; k < grafo->numVertici; k++){
-                if(listaMatrici[index ^ 1][j][i] != INT_MAX && listaMatrici[index ^ 1][i][k] != INT_MAX && listaMatrici[index ^ 1][j][k] > listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k]){
+                if(listaMatrici[index ^ 1][j][i] != INT_MAX &&
+                   listaMatrici[index ^ 1][i][k] != INT_MAX &&
+                   listaMatrici[index ^ 1][j][k] > listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k]){
+
                     listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][i] + listaMatrici[index ^ 1][i][k];
+                    
                 } else {
                     listaMatrici[index][j][k] = listaMatrici[index ^ 1][j][k];
                 }
@@ -479,7 +475,7 @@ int main() {
             double bellmanFordAttempts[ATTEMPTS_X_GRAPH];
             double dijkstraAttempts[ATTEMPTS_X_GRAPH];
             double floydWarshallAttempts[ATTEMPTS_X_GRAPH];
-            int size1, size2;
+            int size1, size2, size3;
 
             for(int attempt = 0; attempt < ATTEMPTS_X_GRAPH; attempt++){
 
@@ -500,6 +496,7 @@ int main() {
                 copiaGrafo(grafoMatrice, grafo);
 
                 size1 = sizeof(struct Grafo) + sizeof(struct Lista) * grafo->numVertici + sizeof(struct Nodo) * numArchi;
+                size3 = size1 + 2 * sizeof(int) * grafo->numVertici + 2 * sizeof(int*);
                 size2 = sizeof(struct GrafoMatrice) + sizeof(int*) * 3 * grafoMatrice->numVertici + sizeof(int) * 3 * grafoMatrice->numVertici * grafoMatrice->numVertici + sizeof(int**) * 2;
 
                 // ALGORITMI
@@ -571,7 +568,7 @@ int main() {
             bellmanFordTimes[round + round2] = sumBellmanFord / ATTEMPTS_X_GRAPH;
             dijkstraTimes[round + round2] = sumDijkstra / ATTEMPTS_X_GRAPH;
 
-            printf("Dimensione liste di adiacenza %d nodi e %d archi: %d B --- Dimensione matrice: %d B\n", numVertici, numArchi, size1, size2);
+            printf("%d nodi e %d archi: Dimensione dijkstra:  %d B --- Dimensione Bellman-Ford: %d B --- Dimensione Floyd-Warshall: %d B\n", numVertici, numArchi, size3, size1, size2);
             printf("\nMEDIA %d nodi, %d archi: Floyd Warshall: %fs --- Bellman Ford: %fs --- Dijkstra: %fs\n\n", numVertici, numArchi, floydWarshallTimes[round + round2], bellmanFordTimes[round + round2],  dijkstraTimes[round + round2]);
 
 
@@ -599,7 +596,6 @@ int main() {
 
     // Per debug, voglio vedere se ottengo gli stessi risultati    
     
-
     
     //stampaGrafo(grafo);
     //stampaGrafoMatrice(grafoMatrice);
@@ -624,8 +620,6 @@ int main() {
     */
 
     fclose(file);
-
-      
     return 0;
 }
 
